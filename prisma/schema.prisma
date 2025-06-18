@@ -1,0 +1,335 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum userRoles {
+  CSD_STAFF
+  ORG_HEAD
+  USER
+  ADMIN
+}
+
+enum orgRoles {
+  participant
+  regulator
+  settlementBank
+  issuer
+}
+
+model Organization {
+  id                  String               @id @default(uuid())
+  identification      identification?
+  contact             contact?
+  behavioural         behavioural?
+  interfaces          interfaces?
+  issuingLocalization issuingLocalization?
+  issuingOptions      issuingOptions?
+  accountsManagement  accountsManagement?
+  cashAccounts        cashAccounts[]
+  cae                 cae?
+  contactPersons      contactPersons[]
+  agentAndManagerRole agentAndManagerRole?
+  settlement          settlement[]
+  roles               orgRoles[]           @default([])
+  logo                String?
+  verified            Boolean              @default(false)
+  users               User[]
+  sandboxes           Sandbox[]
+  sandboxRequests     SandboxRequest[]
+  referralCode        String?              @default("")
+  active              Boolean              @default(true)
+  clients             Client[]
+  Credentials         Credentials[]
+  CredentialsRequest  CredentialsRequest[]
+  etoken              etoken[]
+}
+
+model identification {
+  id                 String       @id @default(uuid())
+  fullname           String
+  localname          String?
+  identificationType String
+  swiftBic           String?
+  proprietaryId      String?
+  shortname          String
+  lei                String       @unique
+  legacyCode         String?
+  orgId              String       @unique
+  organization       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([swiftBic, proprietaryId])
+}
+
+model behavioural {
+  id                        String       @id @default(uuid())
+  orgId                     String       @unique
+  startingDate              String?
+  participantType           String?
+  issuerType                String?
+  settelementBankType       String?
+  regulatorType             String?
+  economicSector            String?
+  defaultLanguage           String?
+  taxationSchema            String?
+  taxRegistrationNumber     String?
+  globalCashSettlementAgent Boolean?
+  organization              Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model interfaces {
+  id              String       @id @default(uuid())
+  stpConnectivity String?
+  orgId           String       @unique
+  organization    Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model issuingLocalization {
+  id                       String       @id @default(uuid())
+  internalSecuritiesIssuer Boolean      @default(false)
+  externalSecuritiesIssuer Boolean      @default(false)
+  orgId                    String       @unique
+  organization             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model issuingOptions {
+  id                    String       @id @default(uuid())
+  debtInstrumentIssuer  Boolean      @default(false)
+  equitiesIssuer        Boolean      @default(false)
+  ETFsissuer            Boolean      @default(false)
+  NoNtradingFundsIssuer Boolean      @default(false)
+  CommoditiesIssuer     Boolean      @default(false)
+  orgId                 String       @unique
+  organization          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model accountsManagement {
+  id                           String       @id @default(uuid())
+  allowOwnAccount              Boolean      @default(false)
+  allowClientOmnibusAccount    Boolean      @default(false)
+  allowClientSegregetedAccount Boolean      @default(false)
+  orgId                        String       @unique
+  organization                 Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model cashAccounts {
+  id                      String   @id @default(uuid())
+  settlementBank          String
+  settlementBankAccountNo String
+  requiresTradingCeiling  Boolean  @default(false)
+  cashCurrency            String[]
+  cashSettlementSystem    String   @default("RTGS")
+  orgId                   String   
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+enum paymentOptions {
+ noPayment
+  payToBanknopayment
+  paymentToSuspense
+}
+
+model cae {
+  id            String         @id @default(uuid())
+  paymentOption String 
+  paymentValues PaymentValue[]
+  orgId         String         @unique
+  organization  Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model PaymentValue {
+  id                    String  @id @default(uuid())
+  name                  String  @unique
+  bankAccount           String
+  cashAccount           String
+  affectsTradingCeiling Boolean @default(false)
+  caeId                 String  
+  cae                   cae     @relation(fields: [caeId], references: [id], onDelete: Cascade)
+}
+
+model contactPersons {
+  id           String       @id @default(uuid())
+  fullname     String
+  department   String
+  position     String
+  email        String
+  phoneNumber  String
+  orgId        String       
+  organization Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model agentAndManagerRole {
+  id                               String       @id @default(uuid())
+  programmeAgentForDebtInstruments Boolean      @default(false)
+  issuerAgentForEquities           Boolean      @default(false)
+  issuerAgentForEtfs               Boolean      @default(false)
+  issuerAgentForNonTradedFunds     Boolean      @default(false)
+  nonTradedFundManager             Boolean      @default(false)
+  issuerAgentForCommodities        Boolean      @default(false)
+  orgId                            String       @unique
+  organization                     Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model settlement {
+  id                   String       @id @default(uuid())
+  cashSettlementSystem String
+  settlementBankCode   String
+  orgId                String       
+  organization         Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+}
+
+model contact {
+  id              String         @id @default(uuid())
+  residencyStatus String
+  mainEmail       String @unique
+  mainPhoneNumber String @unique
+  orgId           String         @unique
+  organization    Organization   @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  legalAddress    legalAddress?  @relation(name: "legalAddress")
+  actualAddress   actualAddress? @relation(name: "actualAddress")
+}
+
+model legalAddress {
+  id          String  @id @default(uuid())
+  street      String?
+  city        String?
+  state       String?
+  country     String?
+  postalcode  String?
+  phoneNumber String?
+  faxNumber   String?
+  contactId   String  @unique
+  contact     contact @relation(name: "legalAddress", fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model actualAddress {
+  id          String  @id @default(uuid())
+  street      String?
+  city        String?
+  state       String?
+  country     String?
+  postalcode  String?
+  phoneNumber String?
+  faxNumber   String?
+  contactId   String  @unique
+  contact     contact @relation(name: "actualAddress", fields: [contactId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                         String               @id @default(uuid())
+  firstName                  String?
+  lastName                   String?
+  username                   String               @unique
+  email                      String               @unique
+  password                   String
+  isActive                   Boolean              @default(true)
+  nationalIdNumber           String?
+  avatar                     String[]
+  phoneNumber                String
+  passwordResetToken         String?              @default("")
+  lastLogin                  DateTime?
+  organizationId             String
+  organization               Organization         @relation(fields: [organizationId], references: [id])
+  roles                      userRoles[]          @default([USER])
+  createdAt                  DateTime             @default(now())
+  Credentials                Credentials[]
+  CredentialsRequest         CredentialsRequest[]
+  feedbackQuestionOwner      feedback[]            @relation(name: "questionOwner")
+}
+
+model Sandbox {
+  id             String       @id @default(uuid())
+  url            String
+  credentials    String?
+  isActive       Boolean      @default(true)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime     @default(now())
+}
+
+model SandboxRequest {
+  id             String       @id @default(uuid())
+  requestDetails String
+  status         String       @default("Pending")
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  username       String?
+  createdAt      DateTime     @default(now())
+}
+
+model Client {
+  id             String       @id @default(uuid())
+  fileUrl        String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  category       String
+}
+
+model Credentials {
+  id             String       @id @default(uuid())
+  username       String
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User         @relation(fields: [userId], references: [id])
+  url            String
+  expiredDate    String
+}
+
+enum credRequesetType {
+  new
+  forgot
+}
+
+model CredentialsRequest {
+  id              String           @id @default(uuid())
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId  String
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  resourceName    String
+  status          String           @default("Pending")
+  credRequestType credRequesetType @default(new)
+}
+
+model News {
+  id          String   @id @default(uuid())
+  title       String
+  detail      String
+  category    String
+  attachments String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+
+model feedback {
+  id             String                 @id @default(uuid())
+  type           String
+  question       String
+  answer         String?
+  askingPersonid String?                
+  askingPerson   User?                  @relation(name: "questionOwner", fields: [askingPersonid], references: [id])
+  attachements   String[]
+  fullname String?
+  phonenumber String?
+  email String?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+}
+
+model etoken {
+  id             String       @id @default(uuid())
+  organizationID String
+  organization   Organization @relation(fields: [organizationID], references: [id])
+  attachements   String[]
+  resolved       Boolean      @default(false)
+  rejected       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
