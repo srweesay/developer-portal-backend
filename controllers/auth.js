@@ -41,7 +41,7 @@ module.exports = {
       const company = await prisma.organization.findFirst({
         where: {
           identification: {
-            contains: `"shortname":"${orgShortCode}"`,
+            shortname: orgShortCode,
           },
         },
       });
